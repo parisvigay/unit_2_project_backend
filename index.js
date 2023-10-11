@@ -70,6 +70,33 @@ app.post('/add/song', async (req, res) => {
     }
 })
 
+app.post('/add/artist', async (req, res) => {
+    try {
+        const data = req.body
+        let artist = await Artist.findOne({ name: data.artist })
+        if (!artist) {
+            const artist = new Artist({
+                name: data.name,
+                genre: data.genre,
+                active: data.active.toLowerCase() ==='yes'?true:false,
+                image: data.image
+            })
+            await artist.save()
+            return res.status(200).json(artist)
+        }
+        else {
+            Artist.updateOne({ name: data.artist }, {
+                genre: data.genre,
+                active: data.active.toLowerCase() ==='yes'?true:false,
+                image: data.image
+            })
+            return res.status(200).json(artist)
+        }
+    } catch (err) {
+        console.log(err);
+    }
+})
+
 app.post('/add/album', async (req, res) => {
     try {
         const data = req.body
