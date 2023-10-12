@@ -43,9 +43,32 @@ const albumSchema = new mongoose.Schema({
     genre: String,
 })
 
+const userSchema = new mongoose.Schema({
+    emailAddress: { type: String, required: true },
+    lastLogin: { type: Date, required: true }
+})
+
 const Artist = mongoose.model('Artist', artistSchema) 
 const Song = mongoose.model('Song', songSchema)
 const Album = mongoose.model('Album', albumSchema)
+const User = mongoose.model('User', userSchema)
+
+app.post('/add/user', async (req, res) => {
+    console.log(req.body);
+    try {
+        const now = new Date()
+        if (await User.count({ 'userEmail': req.body.email }) === 0) {
+          const newUser = new User({ emailAddress: req.body.emailAddress, lastLogin: now })
+          await newUser.save()
+          return res.status(200).json(newUser)
+        } else {
+          await User.findOneAndUpdate({ emailAddress: req.body.emailAddress }, { lastLogin: now })
+          return res.status(200)
+        }
+      } catch (err) {
+        console.log(err.message)
+      }
+    })
 
 app.post('/add/song', async (req, res) => {
     try {
@@ -121,6 +144,11 @@ app.post('/add/album', async (req, res) => {
     } catch (err) {
         console.log(err);
     }
+})
+
+app.get('/users', async (req, res) => {
+    const users= await User.find({});
+    res.status(200).json(users)
 })
 
 app.get('/artists', async (req, res) => {
