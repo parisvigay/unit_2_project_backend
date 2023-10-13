@@ -15,13 +15,52 @@ app.listen(port, () => {
     console.log(`listening on port: ${port}`);
 })
 
+
 mongoose.connect(`${process.env.DATABASE_URL}`)
+
+//add content
 const artistSchema = new mongoose.Schema({
     name: String,
     genre: String,
-    active: Boolean,
-    image: String
+    active: String,
+    image: String,
+    isArtist: Boolean,
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }
 })
+
+app.post('/add/artist', async (req, res) => {
+    try {
+        const data = req.body
+        let findUser = await User.findOne({ 'emailAddress': data.emailAddress })
+        let artist = await Artist.findOne({ name: data.artist })
+        if (!artist) {
+            const artist = new Artist({
+                name: data.name,
+                genre: data.genre,
+                active: data.active,
+                image: data.image,
+                isArtist: true,
+                user: findUser._id
+            })
+            await artist.save()
+            return res.status(200).json(artist)
+        }
+        else {
+            Artist.updateOne({ name: data.artist }, {
+                genre: data.genre,
+                active: data.active,
+                image: data.image
+            })
+            return res.status(200).json(artist)
+        }
+    } catch (err) {
+        console.log(err);
+    }
+})
+
 
 const songSchema = new mongoose.Schema({
     artist: {
@@ -30,8 +69,39 @@ const songSchema = new mongoose.Schema({
     },
     title: String,
     year: String,
-    genre: String
+    genre: String,
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }
 })
+
+app.post('/add/song', async (req, res) => {
+    try {
+        const data = req.body
+        let findUser = await User.findOne({ 'emailAddress': data.emailAddress })
+        let artist = await Artist.findOne({ name: data.artist })
+        if (!artist) {
+            artist = new Artist({
+                name: data.artist,
+                isArtist: false
+            })
+            await artist.save()
+        }
+        const song = new Song({
+            artist: artist,
+            title: data.title,
+            year: data.year,
+            genre: data.genre,
+            user: findUser._id
+        })
+        await song.save()
+        return res.status(200).json(song)
+    } catch (err) {
+        console.log(err);
+    }
+})
+
 
 const albumSchema = new mongoose.Schema({
     artist: {
@@ -41,88 +111,16 @@ const albumSchema = new mongoose.Schema({
     title: String,
     year: String,
     genre: String,
-})
-
-const userSchema = new mongoose.Schema({
-    emailAddress: { type: String, required: true },
-    lastLogin: { type: Date, required: true }
-})
-
-const Artist = mongoose.model('Artist', artistSchema) 
-const Song = mongoose.model('Song', songSchema)
-const Album = mongoose.model('Album', albumSchema)
-const User = mongoose.model('User', userSchema)
-
-app.post('/add/user', async (req, res) => {
-    console.log(req.body);
-    try {
-        const now = new Date()
-        if (await User.count({ 'userEmail': req.body.email }) === 0) {
-          const newUser = new User({ emailAddress: req.body.emailAddress, lastLogin: now })
-          await newUser.save()
-          return res.status(200).json(newUser)
-        } else {
-          await User.findOneAndUpdate({ emailAddress: req.body.emailAddress }, { lastLogin: now })
-          return res.status(200)
-        }
-      } catch (err) {
-        console.log(err.message)
-      }
-    })
-
-app.post('/add/song', async (req, res) => {
-    try {
-        const data = req.body
-        let artist = await Artist.findOne({ name: data.artist })
-        if (!artist) {
-            artist = new Artist({
-                name: data.artist
-            })
-            await artist.save()
-        }
-        const song = new Song({
-            artist: artist,
-            title: data.title,
-            year: data.year,
-            genre: data.genre
-        })
-        await song.save()
-        return res.status(200).json(song)
-    } catch (err) {
-        console.log(err);
-    }
-})
-
-app.post('/add/artist', async (req, res) => {
-    try {
-        const data = req.body
-        let artist = await Artist.findOne({ name: data.artist })
-        if (!artist) {
-            const artist = new Artist({
-                name: data.name,
-                genre: data.genre,
-                active: data.active.toLowerCase() ==='yes'?true:false,
-                image: data.image
-            })
-            await artist.save()
-            return res.status(200).json(artist)
-        }
-        else {
-            Artist.updateOne({ name: data.artist }, {
-                genre: data.genre,
-                active: data.active.toLowerCase() ==='yes'?true:false,
-                image: data.image
-            })
-            return res.status(200).json(artist)
-        }
-    } catch (err) {
-        console.log(err);
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     }
 })
 
 app.post('/add/album', async (req, res) => {
     try {
         const data = req.body
+        let findUser = await User.findOne({ 'emailAddress': data.emailAddress })
         let artist = await Artist.findOne({ name: data.artist })
         if (!artist) {
             artist = new Artist({
@@ -136,7 +134,8 @@ app.post('/add/album', async (req, res) => {
                 artist: artist,
                 title: data.title,
                 year: data.year,
-                genre: data.genre
+                genre: data.genre,
+                user: findUser._id
             })
             await album.save()
             return res.status(200).json(album)
@@ -146,22 +145,100 @@ app.post('/add/album', async (req, res) => {
     }
 })
 
-app.get('/users', async (req, res) => {
-    const users= await User.find({});
-    res.status(200).json(users)
+//users
+const userSchema = new mongoose.Schema({
+    emailAddress: { type: String, required: true },
+    lastLogin: { type: Date, required: true }
 })
 
+app.post('/add/user', async (req, res) => {
+    console.log(req.body);
+    try {
+      const now = new Date();
+      const existingUser = await User.findOne({ emailAddress: req.body.emailAddress });
+  
+      if (!existingUser) {
+        const newUser = new User({ emailAddress: req.body.emailAddress, lastLogin: now });
+        await newUser.save();
+        return res.status(200).json(newUser);
+      } else {
+        existingUser.lastLogin = now; // Update the lastLogin field
+        await existingUser.save();
+        return res.status(200).json(existingUser);
+      }
+    } catch (err) {
+      console.log(err.message);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+
+//favourites
+const favouriteSchema = new mongoose.Schema({
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    song: String,
+    artist: String,
+    album: String
+});
+
+
+app.post('/add/favourite', async (req, res) => {
+    try {
+        const data = req.body;
+        const user = await User.findOne({ emailAddress: data.emailAddress });
+        const favourite = new Favourite({
+            user: user._id,
+            song: data.song,
+            artist: data.artist,
+            album: data.album
+        });
+        await favourite.save();
+        return res.status(200).json(favourite);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+app.get('/favourites', async (req, res) => {
+    const favourites= await Favourite.find({});
+    res.status(200).json(favourites)
+})
+
+app.put('/favourites/:id', async (req, res) => {
+    const id = req.params.id;
+    const favourite = await Favourite.findById(id);
+    favourite.set(req.body)
+    await favourite.save()
+    return res.status(200).json(favourite)
+})
+
+//models
+const Artist = mongoose.model('Artist', artistSchema) 
+const Song = mongoose.model('Song', songSchema)
+const Album = mongoose.model('Album', albumSchema)
+const User = mongoose.model('User', userSchema)
+const Favourite = mongoose.model('Favourite', favouriteSchema)
+
+
+// app.get('/users', async (req, res) => {
+//     const users= await User.find({});
+//     res.status(200).json(users)
+// })
+
 app.get('/artists', async (req, res) => {
-    const artists= await Artist.find({});
+    const artists= await Artist.find({}).populate('user');
     res.status(200).json(artists)
 })
 
 app.get('/songs', async (req, res) => {
-    const songs= await Song.find({});
+    const songs= await Song.find({}).populate('artist').populate('user');
     res.status(200).json(songs)
 })
 
 app.get('/albums', async (req, res) => {
-    const albums= await Album.find({});
+    const albums= await Album.find({}).populate('artist').populate('user');
     res.status(200).json(albums)
 })
