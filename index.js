@@ -203,9 +203,28 @@ app.post('/add/favourite', async (req, res) => {
 });
 
 app.get('/favourites', async (req, res) => {
-    const favourites= await Favourite.find({});
-    res.status(200).json(favourites)
-})
+    const userEmail = req.query.emailAddress;
+    try {
+        const user = await User.findOne({ emailAddress: userEmail });
+        const userFavourites = await Favourite
+            .find({ user: user._id }) // favourites corresponding only to the current user
+            .sort({ _id: -1 }) // Sort by most recently added
+            .limit(1); // limit it to only 1
+        res.status(200).json(userFavourites);
+    } catch (err) {
+        console.error(err);
+    }
+});
+
+// Endpoint to retrieve all favorites
+app.get('/all-favourites', async (req, res) => {
+    try {
+        const allFavorites = await Favourite.find({});
+        res.status(200).json(allFavorites);
+    } catch (err) {
+        console.error(err);
+    }
+});
 
 app.put('/favourites/:id', async (req, res) => {
     const id = req.params.id;
