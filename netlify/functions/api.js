@@ -3,19 +3,13 @@ import express, {Router} from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
+import serverless from "serverless-http";
 
-const app = express()
+const api = express()
 const router = Router()
 
-app.use(cors())
-app.use(bodyParser.json())
-
-const port = process.env.PORT || 4000
-
-app.listen(port, () => {
-    console.log(`listening on port: ${port}`);
-})
-
+api.use(cors())
+api.use(bodyParser.json())
 
 mongoose.connect(`${process.env.DATABASE_URL}`)
 
@@ -262,3 +256,7 @@ router.get('/albums', async (req, res) => {
     const albums= await Album.find({}).populate('artist').populate('user');
     res.status(200).json(albums)
 })
+
+api.use("/api/", router)
+
+export const handler = serverless(api);
