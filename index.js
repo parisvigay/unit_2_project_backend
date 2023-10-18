@@ -220,7 +220,7 @@ router.get('/favourites', async (req, res) => {
 // Endpoint to retrieve all favorites
 router.get('/all-favourites', async (req, res) => {
     try {
-        const allFavorites = await Favourite.find({});
+        const allFavorites = await Favourite.find({}).populate('user');
         res.status(200).json(allFavorites);
     } catch (err) {
         console.error(err);
@@ -262,3 +262,5 @@ router.get('/albums', async (req, res) => {
     const albums= await Album.find({}).populate('artist').populate('user');
     res.status(200).json(albums)
 })
+
+app.use("/", router)
