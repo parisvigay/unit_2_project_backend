@@ -214,7 +214,7 @@ router.get('/favourites', async (req, res) => {
 // Endpoint to retrieve all favorites
 router.get('/all-favourites', async (req, res) => {
     try {
-        const allFavorites = await Favourite.find({});
+        const allFavorites = await Favourite.find({}).populate('user');
         res.status(200).json(allFavorites);
     } catch (err) {
         console.error(err);
@@ -237,25 +237,62 @@ const User = mongoose.model('User', userSchema)
 const Favourite = mongoose.model('Favourite', favouriteSchema)
 
 
-// app.get('/users', async (req, res) => {
-//     const users= await User.find({});
-//     res.status(200).json(users)
-// })
-
 router.get('/artists', async (req, res) => {
     const artists= await Artist.find({}).populate('user');
     res.status(200).json(artists)
 })
 
+router.delete('/delete-artists/:id', async (req, res) => {
+    const artistId = req.params.id;
+  
+    try {
+      const deletedArtist = await Artist.findByIdAndRemove(artistId);
+  
+      if (deletedArtist) {
+      return res.status(204).send();
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  });
+
 router.get('/songs', async (req, res) => {
-    const songs= await Song.find({}).populate('artist').populate('user');
+    const songs= await Song.find({}).populate('artist').populate('user').populate('user', 'emailAddress');
     res.status(200).json(songs)
 })
+
+router.delete('/delete-song/:id', async (req, res) => {
+    const songId = req.params.id;
+  
+    try {
+      const deletedSong = await Song.findByIdAndRemove(songId);
+  
+      if (deletedSong) {
+      return res.status(204).send();
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  });
 
 router.get('/albums', async (req, res) => {
     const albums= await Album.find({}).populate('artist').populate('user');
     res.status(200).json(albums)
 })
+
+router.delete('/delete-album/:id', async (req, res) => {
+    const albumId = req.params.id;
+  
+    try {
+      const deletedAlbum = await Album.findByIdAndRemove(albumId);
+  
+      if (deletedAlbum) {
+      return res.status(204).send();
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  });
 
 api.use("/api/", router)
 
