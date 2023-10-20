@@ -263,10 +263,8 @@ router.get('/songs', async (req, res) => {
 
 router.delete('/delete-song/:id', async (req, res) => {
     const songId = req.params.id;
-  
     try {
       const deletedSong = await Song.findByIdAndRemove(songId);
-  
       if (deletedSong) {
       return res.status(204).send();
       }
